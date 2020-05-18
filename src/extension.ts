@@ -14,22 +14,13 @@ const generateJson = (json: JsonObj, text: string) => {
   const obj: JsonObj = {};
   const folderPath = vscode.workspace.rootPath;
   let maxKey = 0;
-  let baseRegex: RegExp;
   const customJson = fs.readFileSync(folderPath + '/.bl-custom.json', 'utf-8');
   if (!customJson) {
     vscode.window.showInformationMessage('没有 .bl-custom.json 文件');
   }
   const customeConfig = JSON.parse(customJson);
   const { i18nKey } = customeConfig;
-  baseRegex = RegExp(`^key-${i18nKey}-\\d+`);
-  maxKey = Math.max(
-    ...Object.keys(json).map((key: string) => {
-      if (baseRegex.test(key)) {
-        return parseInt(key.replace(`key-${i18nKey}-`, ''));
-      }
-      return 0;
-    })
-  );
+  maxKey = getI18nKeyMaxNumber(json, i18nKey);
   Object.keys(json).forEach((key) => {
     obj[key] = json[key];
     if (key === `key-${i18nKey}-${maxKey}`) {
@@ -45,6 +36,19 @@ const writeJsonToFile = (path: string, json: Object) => {
       console.log(err);
     }
   });
+};
+
+const getI18nKeyMaxNumber = (json: JsonObj,i18nKey: string) => {
+  const baseRegex = RegExp(`^key-${i18nKey}-\\d+`);
+  let maxKey = 0;
+   Object.keys(json).forEach((key: string) => {
+    if (baseRegex.test(key)) {
+      const keyNumber = parseInt(key.replace(`key-${i18nKey}-`, ''));
+      maxKey = Math.max(keyNumber,maxKey);
+    }
+   });
+
+   return maxKey;
 };
 
 const formatI18n = (text: string) => {
@@ -162,11 +166,7 @@ const handleAppFormat = (_text: string) => {
         type: 'vi',
       },
     ];
-    const maxKey = Math.max(
-      ...Object.keys(CNJson).map((key: string) =>
-        parseInt(key.replace(`key${i18nKey}-`, ''))
-      )
-    );
+    const maxKey = getI18nKeyMaxNumber(CNJson, i18nKey);
     textKey = `key${i18nKey}-${maxKey + 1}`;
     Promise.all(
       languageType.map((language) =>
